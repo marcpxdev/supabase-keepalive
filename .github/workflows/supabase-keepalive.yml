@@ -1,0 +1,41 @@
+
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: ecb-eats
+            secret: SUPABASE_DB_URL_ECB_EATS
+          - name: Weabotalk
+            secret: SUPABASE_DB_URL_WEABOTALK
+
+    steps:
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Check ${{ matrix.project.name }}
+        env:
+          DATABASE_URL: ${{ secrets[matrix.project.secret] }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Missing database secret!"
+            exit 1
+          fi
+
+          psql "$DATABASE_URL" \
+            -v ON_ERROR_STOP=1 \
+            -c "SELECT now();"
+
+          echo "${{ matrix.project.name }} is reachable!"
